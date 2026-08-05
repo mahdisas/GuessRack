@@ -4,6 +4,20 @@ export const BOARD_SIZE = 24;
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no I/O/0/1
 const EMPTY_ROOM_TTL = 5 * 60 * 1000; // keep a room alive this long with nobody in it
 
+const MAX_QUESTION = 140;
+const MAX_ANSWER = 80;
+const MAX_HISTORY = 200;
+const REPLIES = ['yes', 'no', 'other'];
+
+/** Trim, cap, and strip control characters from anything a player typed. */
+function cleanText(raw, max) {
+  return String(raw ?? '')
+    .replace(/[\u0000-\u001f\u007f]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, max);
+}
+
 /**
  * Room rules, chosen by whoever creates the room and fixed for its lifetime.
  * - language: which word pool the rack is drawn from ('en' | 'ar').
@@ -114,6 +128,10 @@ function stateFor(room, seat) {
     flipped: me ? [...me.flipped] : [],
     misses: me?.misses ?? 0,
     settings: room.settings,
+    // Both players took part in every exchange, so the log is fully shared.
+    pending: room.pending,
+    history: room.history,
+    asked: room.asked,
     rematchReady: room.players.map((p) => !!p?.rematch),
   };
   // Withheld unless the room was created with the setting on — the client
@@ -145,6 +163,9 @@ function startMatch(room) {
   room.starter = 1 - room.starter;
   room.turn = room.starter;
   room.message = '';
+  room.pending = null;
+  room.history = [];
+  room.asked = false;
   const a = Math.floor(Math.random() * BOARD_SIZE);
   let b = Math.floor(Math.random() * BOARD_SIZE);
   while (b === a) b = Math.floor(Math.random() * BOARD_SIZE); // distinct secrets
@@ -181,6 +202,9 @@ function cmdCreate(ws, msg) {
     winner: null,
     message: '',
     settings: cleanSettings(msg.settings),
+    pending: null,
+    history: [],
+    asked: false,
     players: [null, null],
     emptySince: null,
   };
@@ -241,9 +265,45 @@ function cmdFlip(room, seat, msg) {
   broadcast(room);
 }
 
+/** Put a question to the opponent. One per turn, and it blocks until answered. */
+function cmdAsk(room, seat, msg) {
+  if (room.phase !== 'playing') return;
+  const me = room.players[seat];
+  if (room.turn !== seat) return fail(me.ws, 'You can only ask on your turn.');
+  if (room.pending) return fail(me.ws, 'Wait for their answer first.');
+  if (room.asked) return fail(me.ws, 'One question per turn — pass the turn to ask again.');
+
+  const text = cleanText(msg.text, MAX_QUESTION);
+  if (!text) return fail(me.ws, 'Type a question first.');
+
+  room.pending = { from: seat, text };
+  room.message = '';
+  broadcast(room);
+}
+
+/** Answer the question on the table: yes, no, or anything you want to type. */
+function cmdAnswer(room, seat, msg) {
+  if (room.phase !== 'playing' || !room.pending) return;
+  const me = room.players[seat];
+  if (room.pending.from === seat) return fail(me.ws, 'You asked that one — wait for the reply.');
+
+  const reply = REPLIES.includes(msg.reply) ? msg.reply : null;
+  if (!reply) return fail(me.ws, 'Answer yes, no, or write your own.');
+  const note = reply === 'other' ? cleanText(msg.text, MAX_ANSWER) : '';
+  if (reply === 'other' && !note) return fail(me.ws, 'Write your answer first.');
+
+  room.history.push({ asker: room.pending.from, question: room.pending.text, reply, note });
+  if (room.history.length > MAX_HISTORY) room.history.shift();
+  room.pending = null;
+  room.asked = true;
+  broadcast(room);
+}
+
 function cmdEndTurn(room, seat) {
   if (room.phase !== 'playing' || room.turn !== seat) return;
+  if (room.pending) return fail(room.players[seat].ws, 'Wait for their answer first.');
   room.turn = 1 - seat;
+  room.asked = false;
   room.message = '';
   broadcast(room);
 }
@@ -253,6 +313,7 @@ function cmdGuess(room, seat, msg) {
   const me = room.players[seat];
   const them = room.players[1 - seat];
   if (room.turn !== seat) return fail(me.ws, 'You can only guess on your turn.');
+  if (room.pending) return fail(me.ws, 'Wait for their answer first.');
   if (!them) return fail(me.ws, 'Your opponent left.');
   const index = Number(msg.index);
   if (!Number.isInteger(index) || index < 0 || index >= BOARD_SIZE) return;
@@ -318,6 +379,8 @@ export function handleMessage(ws, raw) {
 
   switch (msg.t) {
     case 'flip': return cmdFlip(room, seat, msg);
+    case 'ask': return cmdAsk(room, seat, msg);
+    case 'answer': return cmdAnswer(room, seat, msg);
     case 'endTurn': return cmdEndTurn(room, seat);
     case 'guess': return cmdGuess(room, seat, msg);
     case 'rematch': return cmdRematch(room, seat);

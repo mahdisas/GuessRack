@@ -2,8 +2,8 @@
 
 A free two-player word guessing game in 3D. Both players see the same rack of
 24 word cards; each of you is secretly assigned one word from it. You take turns
-asking each other yes/no questions **out loud** ("Is it alive?", "Would it fit in
-a backpack?"), knock down the cards the answers rule out, and race to name the
+typing yes/no questions to each other ("Is it alive?", "Would it fit in a
+backpack?"), knock down the cards the answers rule out, and race to name the
 other player's word.
 
 Each player plays on their own device — one creates a room, the other joins with
@@ -57,14 +57,19 @@ aside, where there is never more than one).
 1. Player A hits **Create a room**, sets the rules, and reads the code to player B.
 2. Player B enters it. Both racks deal in and each player sees their own secret
    word on the card held in the corner.
-3. On your turn, ask one yes/no question out loud. Your opponent answers out
-   loud — the game deliberately stays out of the conversation.
-4. Click any card to knock it down (click again to stand it back up). Your
+3. On your turn, type one yes/no question and send it. It appears on your
+   opponent's screen and they answer **Yes**, **No**, or **Other…** and write
+   their own reply. One question per turn, and it blocks the turn until it is
+   answered.
+4. Every exchange lands in a shared log — the **Log** button in the ask strip
+   opens the full history, and the latest exchange always shows inline.
+5. Click any card to knock it down (click again to stand it back up). Your
    knocked-down cards are private.
-5. Hit **Done asking — pass turn** to hand over.
-6. When you're ready, hit **Call their word** on your turn and click the card you
+6. Hit **Pass turn** to hand over. Playing in the same room? Skip the typing,
+   talk, and just pass the turn — nothing forces you to send a question.
+7. When you're ready, hit **Call their word** on your turn and click the card you
    think is theirs.
-7. Both players hit **Rematch** for a fresh board; the previous loser starts.
+8. Both players hit **Rematch** for a fresh board; the previous loser starts.
 
 Refreshing the page, or dropping off Wi-Fi, puts you back in the same match —
 the server holds your seat for five minutes.

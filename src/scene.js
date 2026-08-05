@@ -16,21 +16,14 @@ const NARROW = 620; // matches the CSS breakpoint where the HUD stacks
 function hudReserve(width, height) {
   const topBar = document.querySelector('.topbar');
   const bottomBar = document.querySelector('.bottombar');
-  const help = document.querySelector('#help');
 
   if (!bottomBar || bottomBar.offsetParent === null) {
-    return width <= NARROW ? { top: 0.16, bottom: 0.25 } : { top: 0.12, bottom: 0.16 };
+    return width <= NARROW ? { top: 0.16, bottom: 0.3 } : { top: 0.12, bottom: 0.22 };
   }
-
-  // The hint floats above the bar, so the reserve is whichever reaches higher.
-  const hintReach =
-    help && help.offsetParent !== null
-      ? help.offsetHeight + (parseFloat(getComputedStyle(help).bottom) || 0)
-      : 0;
 
   return {
     top: Math.min(0.3, (topBar.offsetHeight + 14) / height),
-    bottom: Math.min(0.45, (Math.max(bottomBar.offsetHeight, hintReach) + 14) / height),
+    bottom: Math.min(0.5, (bottomBar.offsetHeight + 14) / height),
   };
 }
 

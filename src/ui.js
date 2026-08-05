@@ -27,6 +27,18 @@ const el = {
   theirStanding: $('their-standing'),
   guessBtn: $('guess-btn'),
   endturnBtn: $('endturn-btn'),
+  qaLast: $('qa-last'),
+  historyBtn: $('history-btn'),
+  askForm: $('ask-form'),
+  askInput: $('ask-input'),
+  answerBox: $('answer-box'),
+  answerQuestion: $('answer-question'),
+  answerYes: $('answer-yes'),
+  answerNo: $('answer-no'),
+  answerOther: $('answer-other'),
+  otherForm: $('other-form'),
+  otherInput: $('other-input'),
+  qaStatus: $('qa-status'),
   toast: $('toast'),
   modal: $('modal'),
   modalTitle: $('modal-title'),
@@ -84,11 +96,34 @@ export function bindLobby({ onCreate, onJoin }) {
   });
 }
 
-export function bindGame({ onLeave, onEndTurn, onToggleGuess, onCopy }) {
+export function bindGame({ onLeave, onEndTurn, onToggleGuess, onCopy, onAsk, onAnswer, onHistory }) {
   el.leaveBtn.addEventListener('click', onLeave);
   el.endturnBtn.addEventListener('click', onEndTurn);
   el.guessBtn.addEventListener('click', onToggleGuess);
   el.copyBtn.addEventListener('click', onCopy);
+  el.historyBtn.addEventListener('click', onHistory);
+
+  el.askForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const text = el.askInput.value.trim();
+    if (!text) return;
+    el.askInput.value = ''; // only cleared once it is actually on its way
+    onAsk(text);
+  });
+
+  el.answerYes.addEventListener('click', () => onAnswer('yes'));
+  el.answerNo.addEventListener('click', () => onAnswer('no'));
+  el.answerOther.addEventListener('click', () => {
+    el.otherForm.hidden = false;
+    el.otherInput.focus();
+  });
+  el.otherForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const text = el.otherInput.value.trim();
+    if (!text) return;
+    el.otherInput.value = '';
+    onAnswer('other', text);
+  });
 }
 
 export function showScreen(which) {
@@ -141,12 +176,22 @@ export function updateHud(state, { guessArmed }) {
   const myTurn = state.turn === state.seat;
   const them = state.opponent?.name ?? 'Opponent';
 
+  const pending = state.phase === 'playing' ? state.pending : null;
+  const answering = !!pending && pending.from !== state.seat;
+
   el.turnBanner.textContent = state.phase === 'over'
     ? 'Match over'
-    : myTurn
-      ? 'Your turn — ask a question out loud'
-      : `${them} is asking…`;
-  el.turnBanner.className = `turn-banner ${state.phase === 'over' ? '' : myTurn ? 'mine' : 'theirs'}`;
+    : answering
+      ? `${them} asked you a question`
+      : pending
+        ? 'Waiting for their answer…'
+        : myTurn
+          ? state.asked
+            ? 'Your turn — knock cards down, then pass'
+            : 'Your turn — ask a question'
+          : `${them} is asking…`;
+  el.turnBanner.className =
+    `turn-banner ${state.phase === 'over' ? '' : answering || (myTurn && !pending) ? 'mine' : 'theirs'}`;
 
   const online = state.opponent?.online !== false;
   el.opponentChip.className = `chip ${online ? '' : 'offline'}`;
@@ -164,7 +209,8 @@ export function updateHud(state, { guessArmed }) {
   el.missCount.hidden = sudden || !state.misses;
   el.myMisses.textContent = state.misses ?? 0;
 
-  const active = state.phase === 'playing';
+  // An unanswered question blocks everything else: resolve it first.
+  const active = state.phase === 'playing' && !pending;
   el.endturnBtn.disabled = !active || !myTurn || guessArmed;
   el.guessBtn.disabled = !active || !myTurn;
   el.guessBtn.textContent = guessArmed
@@ -173,6 +219,91 @@ export function updateHud(state, { guessArmed }) {
       ? 'Final guess'
       : 'Call their word';
   el.guessBtn.classList.toggle('armed', guessArmed);
+}
+
+const REPLY_LABEL = { yes: 'Yes', no: 'No' };
+// The markup ships with the how-to-play hint; keep it so an empty log (a fresh
+// match, or a rematch) can fall back to it instead of stranding the last one.
+const QA_HINT = el.qaLast.innerHTML;
+
+/** One log line: "Mahdi: Is it alive? — Yes" */
+function describeEntry(entry, state) {
+  const who = entry.asker === state.seat ? 'You' : state.opponent?.name ?? 'Opponent';
+  const answer = entry.reply === 'other' ? entry.note : REPLY_LABEL[entry.reply];
+  return { who, question: entry.question, answer, reply: entry.reply };
+}
+
+/**
+ * Drives the ask/answer strip. Only toggles `hidden` and text — the inputs
+ * themselves are never rebuilt, so a state update can't eat what you're typing.
+ */
+export function renderQA(state) {
+  const playing = state.phase === 'playing';
+  const pending = playing ? state.pending : null;
+  const myTurn = state.turn === state.seat;
+  const them = state.opponent?.name ?? 'Opponent';
+
+  const answering = !!pending && pending.from !== state.seat;
+  const waitingForThem = !!pending && pending.from === state.seat;
+  const canAsk = playing && myTurn && !pending && !state.asked;
+
+  el.askForm.hidden = !canAsk;
+  el.answerBox.hidden = !answering;
+  if (!answering) el.otherForm.hidden = true;
+
+  if (answering) el.answerQuestion.textContent = pending.text;
+
+  let status = '';
+  if (waitingForThem) status = `Waiting for ${them} to answer…`;
+  else if (playing && myTurn && state.asked) status = 'Knock cards down, then pass the turn.';
+  else if (playing && !myTurn && !pending) {
+    status = state.asked
+      ? `${them} is knocking cards down…`
+      : `${them} is thinking of a question…`;
+  }
+  el.qaStatus.hidden = !status;
+  el.qaStatus.textContent = status;
+
+  const history = state.history ?? [];
+  el.historyBtn.textContent = history.length ? `Log (${history.length})` : 'Log';
+
+  if (!history.length) {
+    el.qaLast.innerHTML = QA_HINT;
+  } else {
+    const last = describeEntry(history[history.length - 1], state);
+    const tag = last.reply === 'yes' ? 'yes-tag' : last.reply === 'no' ? 'no-tag' : '';
+    // Players type in whatever language they like, so isolate every free-text
+    // run from the English scaffolding around it.
+    el.qaLast.innerHTML =
+      `<b><bdi>${escapeHtml(last.who)}</bdi>:</b> <bdi>${escapeHtml(last.question)}</bdi> — ` +
+      `<span class="${tag}"><bdi>${escapeHtml(last.answer)}</bdi></span>`;
+  }
+}
+
+/** The full exchange log, newest last, reusing the modal shell. */
+export function showHistory(state, onClose) {
+  const history = state.history ?? [];
+  const body = history.length
+    ? `<ol class="history">${history
+        .map((entry) => {
+          const e = describeEntry(entry, state);
+          return `<li>
+            <span class="who"><bdi>${escapeHtml(e.who)}</bdi> asked</span>
+            <span class="q" dir="auto">${escapeHtml(e.question)}</span><br />
+            <span class="a ${e.reply}" dir="auto">${escapeHtml(e.answer)}</span>
+          </li>`;
+        })
+        .join('')}</ol>`
+    : '<p class="history-empty">No questions yet.</p>';
+
+  openModal({
+    title: 'Question log',
+    body,
+    okText: 'Close',
+    onOk: onClose,
+  });
+  const list = el.modalBody.querySelector('.history');
+  if (list) list.scrollTop = list.scrollHeight;
 }
 
 export function toast(msg, ms = 3200) {

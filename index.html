@@ -47,7 +47,7 @@
         "name": "GuessRack",
         "url": "%VITE_SITE_URL%/",
         "image": "%VITE_SITE_URL%/og-image.png",
-        "description": "A free two-player online word guessing game. Both players see the same rack of 24 word cards and each is secretly assigned one word from it. Players take turns asking each other yes/no questions out loud, knock down the cards ruled out by the answers, and race to name the other player's secret word.",
+        "description": "A free two-player online word guessing game. Both players see the same rack of 24 word cards and each is secretly assigned one word from it. Players take turns typing yes/no questions to each other, answered with Yes, No or a custom reply and kept in a shared log, knock down the cards the answers rule out, and race to name the other player's secret word. Cards are available in English or Arabic.",
         "genre": ["Word game", "Party game", "Deduction game"],
         "playMode": "MultiPlayer",
         "numberOfPlayers": { "@type": "QuantitativeValue", "minValue": 2, "maxValue": 2 },
@@ -123,7 +123,7 @@
             "name": "How do players ask and answer questions?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "Out loud. GuessRack deliberately stays out of the conversation and only tracks the boards, the turn order and the final call, so play it with the other person in the room, on a call, or on voice chat."
+              "text": "You type your question in the game and it appears on your opponent's screen, where they answer Yes, No, or write a custom reply in their own words. Every exchange is saved to a log both players can reopen at any point in the match. If you are sitting in the same room you can skip the typing entirely and just talk, then pass the turn."
             }
           },
           {
@@ -157,7 +157,7 @@
           <h1>Guess<span>Rack</span><small>Two-player word guessing, in 3D</small></h1>
           <p class="tagline">
             One rack of 24 words. You each hold a secret word from it. Ask yes/no
-            questions out loud, knock down what it can't be, and call it first.
+            questions, knock down what it can't be, and call it first.
           </p>
 
           <label class="field">
@@ -223,7 +223,8 @@
               <li>One player hits <b>Create a room</b> and reads the four-character code to the other.</li>
               <li>The second player types that code and joins. Each of you plays on your own device.</li>
               <li>You both see the <b>same rack of 24 word cards</b>, and each of you is secretly given one word from it, shown on the card in the corner of your screen.</li>
-              <li>On your turn, ask one yes/no question out loud — <i>Is it alive? Is it man-made? Would it fit in a backpack?</i> Your opponent answers out loud.</li>
+              <li>On your turn, type one yes/no question — <i>Is it alive? Is it man-made? Would it fit in a backpack?</i> It lands on your opponent's screen and they answer <b>Yes</b>, <b>No</b>, or write their own reply.</li>
+              <li>Every question and answer is kept in a log you can open at any time, so you never lose track of what has already been ruled out.</li>
               <li>Click any card their answer rules out to knock it down. Your knocked-down cards are private.</li>
               <li>Pass the turn, and keep narrowing until you are sure. Then call their word — first correct call wins.</li>
             </ol>
@@ -239,9 +240,11 @@
               probably wastes your turn.
             </p>
             <p>
-              The game deliberately stays out of your conversation. It tracks the racks,
-              whose turn it is and who called it — the questions and the bluffing are
-              yours. Play it across a table, on a call, or on voice chat.
+              Questions are typed and answered in the game itself: you send one, it
+              appears on your opponent's screen, and they reply <b>Yes</b>, <b>No</b>,
+              or write something more honest than either. Everything lands in a log you
+              can reopen mid-match. If you are in the same room and would rather just
+              talk, ignore the box and pass the turn — nothing forces you to type.
             </p>
           </section>
 
@@ -293,6 +296,13 @@
               minutes, with your board exactly as you left it.
             </p>
 
+            <h3>Do we have to be on a call to play?</h3>
+            <p>
+              No. Questions are typed in the game and answered with Yes, No, or a reply
+              you write yourself, and the whole exchange is logged — so it works just as
+              well between two people on opposite sides of the world.
+            </p>
+
             <h3>How long does a match take?</h3>
             <p>Usually five to ten minutes, and there is a rematch button at the end.</p>
           </section>
@@ -330,28 +340,61 @@
       </header>
 
       <footer class="bottombar">
-        <div class="counts">
-          <div><b id="my-standing">24</b><span>your board</span></div>
-          <div id="their-count" hidden><b id="their-standing">24</b><span>their board</span></div>
-          <div id="miss-count" hidden><b id="my-misses">0</b><span>wrong calls</span></div>
+        <!-- Ask / answer / log. Every control is built once and shown or hidden,
+             so an incoming state update never blows away what you were typing. -->
+        <div class="qa">
+          <div class="qa-strip">
+            <p class="qa-last" id="qa-last">
+              <b>Click a card</b> to knock it down when an answer rules it out.
+            </p>
+            <button id="history-btn" class="btn tiny">Log</button>
+          </div>
+
+          <form id="ask-form" class="qa-row" hidden>
+            <input id="ask-input" maxlength="140" autocomplete="off" dir="auto"
+                   placeholder="Ask a yes/no question…" />
+            <button type="submit" class="btn primary">Ask</button>
+          </form>
+
+          <div id="answer-box" class="qa-row qa-answer" hidden>
+            <p class="qa-question" id="answer-question" dir="auto"></p>
+            <div class="qa-replies">
+              <button id="answer-yes" class="btn yes">Yes</button>
+              <button id="answer-no" class="btn no">No</button>
+              <button id="answer-other" class="btn">Other…</button>
+            </div>
+          </div>
+
+          <form id="other-form" class="qa-row" hidden>
+            <input id="other-input" maxlength="80" autocomplete="off" dir="auto"
+                   placeholder="Type your answer…" />
+            <button type="submit" class="btn primary">Send</button>
+          </form>
+
+          <p id="qa-status" class="qa-status" hidden></p>
         </div>
-        <div class="actions">
-          <button id="guess-btn" class="btn danger">Call their word</button>
-          <button id="endturn-btn" class="btn primary">Done asking — pass turn</button>
+
+        <div class="bottombar-row">
+          <div class="counts">
+            <div><b id="my-standing">24</b><span>your board</span></div>
+            <div id="their-count" hidden><b id="their-standing">24</b><span>their board</span></div>
+            <div id="miss-count" hidden><b id="my-misses">0</b><span>wrong calls</span></div>
+          </div>
+          <div class="actions">
+            <button id="guess-btn" class="btn danger">Call their word</button>
+            <button id="endturn-btn" class="btn primary">Pass turn</button>
+          </div>
         </div>
       </footer>
 
       <div id="toast" class="toast" role="status" hidden></div>
-      <div id="help" class="help">
-        <b>Click a card</b> to knock it down when the answer rules it out. Click again to stand it back up.
-      </div>
     </div>
 
     <!-- ----------------------------------------------------------- modal -->
     <div id="modal" class="modal" hidden>
       <div class="modal-card" role="dialog" aria-modal="true">
         <h2 id="modal-title">Title</h2>
-        <p id="modal-body">Body</p>
+        <div id="modal-body">Body</div>
         <div class="modal-actions">
           <button id="modal-cancel" class="btn ghost">Cancel</button>
           <button id="modal-ok" class="btn primary">Confirm</button>

@@ -8,6 +8,7 @@ const stage = new Stage(document.getElementById('stage'));
 let state = null;
 let round = -1;
 let guessArmed = false;
+let historyOpen = false;
 
 const net = new Net({
   onState: handleState,
@@ -32,6 +33,7 @@ function returnToLobby() {
   state = null;
   round = -1;
   guessArmed = false;
+  historyOpen = false;
   stage.setSecret(null);
   stage.setGuessMode(false);
   stage.setInteractive(false);
@@ -46,6 +48,15 @@ ui.bindGame({
   onEndTurn: () => net.send({ t: 'endTurn' }),
   onToggleGuess: () => setGuessArmed(!guessArmed),
   onCopy: () => state && ui.copyCode(state.code),
+  onAsk: (text) => net.send({ t: 'ask', text }),
+  onAnswer: (reply, text) => net.send({ t: 'answer', reply, text }),
+  onHistory: () => {
+    historyOpen = true;
+    ui.showHistory(state, () => {
+      historyOpen = false;
+      ui.closeModal();
+    });
+  },
 });
 
 stage.onCardClick = (index) => {
@@ -77,6 +88,7 @@ function attemptGuess(index) {
   }
   const word = state.board[index];
   const them = state.opponent?.name ?? 'their';
+  historyOpen = false; // this modal is about to take the shell over
   const stake = state.settings?.suddenDeath
     ? 'Get it wrong and you lose the match.'
     : 'Get it wrong and the card goes down and your turn passes.';
@@ -145,9 +157,17 @@ function handleState(next) {
 
   if (guessArmed && (next.phase !== 'playing' || next.turn !== next.seat)) setGuessArmed(false);
   ui.updateHud(next, { guessArmed });
+  ui.renderQA(next);
   // The HUD is what the rack has to fit around, and its height changes with the
-  // tiles on show, so re-measure once it reflects the current state.
+  // tiles and the ask/answer controls on show, so re-measure against the truth.
   stage.resize();
+  // Keep an open log live as new answers land.
+  if (historyOpen && next.phase === 'playing') {
+    ui.showHistory(next, () => {
+      historyOpen = false;
+      ui.closeModal();
+    });
+  }
 
   announce(previous, next);
 
@@ -161,12 +181,22 @@ function announce(previous, next) {
     return;
   }
   if (!previous || previous.phase !== 'playing' || next.phase !== 'playing') return;
+
+  // A question landing in your lap is the one thing worth interrupting for.
+  const askedOfMe = next.pending && next.pending.from !== next.seat;
+  const wasAskedOfMe = previous.pending && previous.pending.from !== previous.seat;
+  if (askedOfMe && !wasAskedOfMe) {
+    ui.toast(`${next.opponent?.name ?? 'They'} asked you a question.`, 4000);
+    return;
+  }
+
   if (previous.turn !== next.turn && next.turn === next.seat) {
     ui.toast('Your turn — ask away.', 2600);
   }
 }
 
 function showResult(next) {
+  historyOpen = false;
   const won = next.winner === next.seat;
   const them = next.opponent?.name ?? 'Opponent';
   const ready = next.rematchReady?.[next.seat];

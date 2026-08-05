@@ -2,8 +2,8 @@
 
 > A free, browser-based, two-player word guessing game. Both players see the
 > same rack of 24 word cards and each is secretly assigned one word from it.
-> Players take turns asking each other yes/no questions out loud, knock down
-> the cards the answers rule out, and race to name the other player's word.
+> Players take turns typing yes/no questions to each other, knock down the
+> cards the answers rule out, and race to name the other player's word.
 
 GuessRack is playable at {{SITE_URL}}/ — no account, no download,
 no payment, no ads. It runs in any modern browser on desktop, tablet or phone.
@@ -14,9 +14,13 @@ no payment, no ads. It runs in any modern browser on desktop, tablet or phone.
   with that code. Each player plays on their own device.
 - Both players see an identical rack of 24 word cards, rendered in 3D. Each
   player is privately assigned one of those words as their secret.
-- Questions are asked and answered **out loud** between the players. The game
-  tracks the boards, the turn order and the final call, but never the
-  conversation, so it works across a table, on a phone call or on voice chat.
+- Questions are typed in the game. On your turn you send one yes/no question;
+  it appears on the opponent's screen and they answer **Yes**, **No**, or write
+  a custom reply in their own words. One question per turn.
+- Every question and answer is stored in a shared log both players can reopen
+  at any time during the match.
+- Typing is optional: two players in the same room can talk instead and simply
+  pass the turn without sending a question.
 - Clicking a card knocks it down. Knocked-down cards are private to the player
   who knocked them down.
 - A player calls their opponent's word to try to win. The first correct call
