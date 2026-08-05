@@ -82,8 +82,10 @@ function attemptGuess(index) {
     : 'Get it wrong and the card goes down and your turn passes.';
   ui.openModal({
     title: 'Call it?',
-    body: `You are declaring that ${ui.escapeHtml(them)}’s secret word is
-           <b>${ui.escapeHtml(word)}</b>.<br />${stake}`,
+    // <bdi> keeps an Arabic word from dragging the surrounding punctuation to
+    // the wrong side of the sentence.
+    body: `You are declaring that <bdi>${ui.escapeHtml(them)}</bdi>’s secret word is
+           <b><bdi>${ui.escapeHtml(word)}</bdi></b>.<br />${stake}`,
     okText: 'Yes — call it',
     cancelText: 'Wait, no',
     onOk: () => {
@@ -126,21 +128,26 @@ function handleState(next) {
     return;
   }
 
+  const lang = next.settings?.language ?? 'en';
+
   if (next.round !== round) {
     round = next.round;
-    stage.buildBoard(next.board);
+    stage.buildBoard(next.board, lang);
     guessArmed = false;
     stage.setGuessMode(false);
     ui.closeModal();
   }
 
-  stage.setSecret(next.secret);
+  stage.setSecret(next.secret, lang);
   stage.setFlipped(next.flipped);
   stage.setInteractive(next.phase === 'playing');
   ui.showScreen('game');
 
   if (guessArmed && (next.phase !== 'playing' || next.turn !== next.seat)) setGuessArmed(false);
   ui.updateHud(next, { guessArmed });
+  // The HUD is what the rack has to fit around, and its height changes with the
+  // tiles on show, so re-measure once it reflects the current state.
+  stage.resize();
 
   announce(previous, next);
 
@@ -168,8 +175,9 @@ function showResult(next) {
       ? '<span class="win">You win</span>'
       : '<span class="lose">You lose</span>',
     body: `${ui.escapeHtml(next.message)}<br /><br />
-           Your word was <b>${ui.escapeHtml(next.reveal?.yours ?? '?')}</b>.<br />
-           ${ui.escapeHtml(them)}’s word was <b>${ui.escapeHtml(next.reveal?.theirs ?? '?')}</b>.`,
+           Your word was <b><bdi>${ui.escapeHtml(next.reveal?.yours ?? '?')}</bdi></b>.<br />
+           <bdi>${ui.escapeHtml(them)}</bdi>’s word was
+           <b><bdi>${ui.escapeHtml(next.reveal?.theirs ?? '?')}</bdi></b>.`,
     okText: ready ? 'Waiting for them…' : 'Rematch',
     okDisabled: !!ready,
     cancelText: 'Leave',

@@ -45,6 +45,7 @@ room. Both players see them on the waiting screen.
 
 | Rule | Default | Effect |
 | --- | --- | --- |
+| Card language | **English** | Switch to `العربية` and the rack is drawn from the Arabic pool in `server/words.js` instead. Both players always share one rack, so the host picks once. |
 | Show opponent's progress | **off** | When off, the opponent's remaining-card count is never sent to your browser at all — there is nothing to peek at. Turn it on to race a visible countdown. |
 | Sudden death guessing | **off** | When off, a wrong call knocks that card down on your own board and passes the turn, so you can call as often as you like. Turn it on and one wrong call loses the match. |
 
@@ -251,8 +252,16 @@ Ranking for a new domain is mostly about links and time. Realistically:
 
 ## Tweaking
 
-- **Word list** — edit `server/words.js`. Anything answerable with yes/no
-  questions works; keep entries short enough to read on a card.
+- **Word lists** — edit `WORD_SETS` in `server/words.js`. Anything answerable
+  with yes/no questions works; keep entries short enough to read on a card. In
+  the Arabic pool, avoid words that differ only by a dot or a trailing letter
+  (نحلة/نخلة, سحاب/سحابة) — two of those on one rack is a misread, not a
+  deduction.
+- **Adding a language** — add a pool to `WORD_SETS`, a matching entry to
+  `SCRIPTS` in `src/textures.js` (font stack, direction, line height, and the
+  "your word" label), and a radio button in the lobby's Room rules. Canvas hands
+  text to the platform shaper, so any script that the OS fonts cover will join
+  and order correctly on its own.
 - **Board size** — `BOARD_SIZE` in `server/rooms.js`. It must match the grid in
   `src/scene.js` (`4 x 6` portrait, `6 x 4` landscape).
 - **Look** — card colours and text live in `src/textures.js`; lighting and

@@ -11,6 +11,7 @@ const el = {
   lobbyError: $('lobby-error'),
   optProgress: $('opt-progress'),
   optSudden: $('opt-sudden'),
+  langInputs: [...document.querySelectorAll('input[name="lang"]')],
   codeDisplay: $('code-display'),
   copyBtn: $('copy-btn'),
   lanHint: $('lan-hint'),
@@ -56,11 +57,14 @@ export function bindLobby({ onCreate, onJoin }) {
     const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY)) ?? {};
     el.optProgress.checked = !!saved.showOpponentProgress;
     el.optSudden.checked = !!saved.suddenDeath;
+    const lang = el.langInputs.find((i) => i.value === saved.language);
+    if (lang) lang.checked = true;
   } catch {
     /* first visit, or corrupted value — the defaults in the markup stand */
   }
   const settings = () => {
     const value = {
+      language: el.langInputs.find((i) => i.checked)?.value ?? 'en',
       showOpponentProgress: el.optProgress.checked,
       suddenDeath: el.optSudden.checked,
     };
@@ -99,9 +103,12 @@ export function showLobbyError(msg) {
   el.lobbyError.hidden = !msg;
 }
 
+const LANGUAGE_NAMES = { en: 'English cards', ar: 'بطاقات عربية' };
+
 /** Both players should be able to see the rules the host picked. */
 export function describeRules(settings = {}) {
   return [
+    LANGUAGE_NAMES[settings.language] ?? LANGUAGE_NAMES.en,
     settings.showOpponentProgress
       ? 'Opponent’s progress visible'
       : 'Opponent’s progress hidden',

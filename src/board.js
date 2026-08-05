@@ -85,9 +85,10 @@ export class Board {
     }
   }
 
-  /** Rebuild the rack for a new match. */
-  build(words) {
+  /** Rebuild the rack for a new match, in the room's word language. */
+  build(words, lang = 'en') {
     this.clearCards();
+    this.lang = lang;
     this.startTime = null; // set on the next frame so the deal animation replays
     words.forEach((word, i) => this.cards.push(this.makeCard(word, i)));
   }
@@ -114,7 +115,7 @@ export class Board {
     lift.add(body);
 
     const faceGeo = new THREE.PlaneGeometry(CARD_W, CARD_H);
-    const faceTexture = makeWordTexture(word);
+    const faceTexture = makeWordTexture(word, { lang: this.lang });
     const faceMat = new THREE.MeshStandardMaterial({
       map: faceTexture,
       roughness: 0.55,

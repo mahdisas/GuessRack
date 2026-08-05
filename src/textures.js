@@ -3,6 +3,32 @@ import * as THREE from 'three';
 const FACE_W = 512;
 const FACE_H = 708; // matches the card's 1.05 : 1.45 aspect
 
+/**
+ * Per-language typography. Canvas hands text to the platform shaper, so Arabic
+ * letters join and reorder correctly on their own — what it cannot do is pick a
+ * font with Arabic coverage, so name the good ones on each OS explicitly.
+ */
+const SCRIPTS = {
+  en: {
+    family: "'Segoe UI', system-ui, -apple-system, Arial, sans-serif",
+    dir: 'ltr',
+    lineHeight: 1.12,
+    label: 'your word',
+    tracking: '6px',
+  },
+  ar: {
+    family: "'Segoe UI', 'Noto Naskh Arabic', 'Geeza Pro', 'Dubai', Tahoma, Arial, sans-serif",
+    dir: 'rtl',
+    // Arabic needs more leading: ج ح خ ع drop well below the baseline.
+    lineHeight: 1.42,
+    label: 'كلمتك',
+    // Letter-spacing would prise the joined letters apart, so: none.
+    tracking: '0px',
+  },
+};
+
+const scriptFor = (lang) => SCRIPTS[lang] ?? SCRIPTS.en;
+
 function roundRect(ctx, x, y, w, h, r) {
   ctx.beginPath();
   ctx.moveTo(x + r, y);
@@ -14,8 +40,8 @@ function roundRect(ctx, x, y, w, h, r) {
 }
 
 /** Break a word into lines that fit the face at the given font size. */
-function layout(ctx, text, maxWidth, size) {
-  ctx.font = `800 ${size}px 'Segoe UI', system-ui, sans-serif`;
+function layout(ctx, text, maxWidth, size, family) {
+  ctx.font = `800 ${size}px ${family}`;
   const words = text.split(' ');
   const lines = [];
   let line = '';
@@ -44,11 +70,16 @@ function finish(canvas) {
  * The readable face of a card: parchment panel with the word set as large as
  * it can be without touching the frame.
  */
-export function makeWordTexture(word, { accent = '#0d9488', big = false, label = null } = {}) {
+export function makeWordTexture(
+  word,
+  { accent = '#0d9488', big = false, label = false, lang = 'en' } = {}
+) {
+  const script = scriptFor(lang);
   const canvas = document.createElement('canvas');
   canvas.width = FACE_W;
   canvas.height = FACE_H;
   const ctx = canvas.getContext('2d');
+  ctx.direction = script.dir;
 
   const grad = ctx.createLinearGradient(0, 0, 0, FACE_H);
   grad.addColorStop(0, '#fbf9f2');
@@ -74,26 +105,27 @@ export function makeWordTexture(word, { accent = '#0d9488', big = false, label =
 
   if (label) {
     ctx.fillStyle = accent;
-    ctx.font = "700 40px 'Segoe UI', system-ui, sans-serif";
+    ctx.font = `700 40px ${script.family}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.letterSpacing = '6px';
-    ctx.fillText(label.toUpperCase(), FACE_W / 2, 96);
+    ctx.letterSpacing = script.tracking;
+    // Uppercasing is meaningless in Arabic and only risks mangling the string.
+    ctx.fillText(script.dir === 'rtl' ? script.label : script.label.toUpperCase(), FACE_W / 2, 96);
     ctx.letterSpacing = '0px';
   }
 
   const maxWidth = FACE_W - 130;
   let size = big ? 108 : 96;
-  let result = layout(ctx, word, maxWidth, size);
+  let result = layout(ctx, word, maxWidth, size, script.family);
   while ((result.widest > maxWidth || result.lines.length > 3) && size > 30) {
     size -= 4;
-    result = layout(ctx, word, maxWidth, size);
+    result = layout(ctx, word, maxWidth, size, script.family);
   }
 
   ctx.fillStyle = '#161a24';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  const lineHeight = size * 1.12;
+  const lineHeight = size * script.lineHeight;
   const top = FACE_H / 2 - ((result.lines.length - 1) * lineHeight) / 2;
   result.lines.forEach((line, i) => ctx.fillText(line, FACE_W / 2, top + i * lineHeight));
 

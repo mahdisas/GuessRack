@@ -6,9 +6,32 @@ const FOV = 45;
 const SECRET_SCALE = 0.46;
 const NARROW = 620; // matches the CSS breakpoint where the HUD stacks
 
-/** Slice of the viewport the HUD overlays, top and bottom. */
-function hudReserve(width) {
-  return width <= NARROW ? { top: 0.16, bottom: 0.25 } : { top: 0.12, bottom: 0.155 };
+/**
+ * Slice of the viewport the HUD overlays, top and bottom, as fractions.
+ *
+ * Measured from the live DOM rather than assumed: the bars are sized in pixels,
+ * so any fixed percentage is only correct at one viewport height. Falls back to
+ * values matching the CSS while the HUD is still hidden (i.e. in the lobby).
+ */
+function hudReserve(width, height) {
+  const topBar = document.querySelector('.topbar');
+  const bottomBar = document.querySelector('.bottombar');
+  const help = document.querySelector('#help');
+
+  if (!bottomBar || bottomBar.offsetParent === null) {
+    return width <= NARROW ? { top: 0.16, bottom: 0.25 } : { top: 0.12, bottom: 0.16 };
+  }
+
+  // The hint floats above the bar, so the reserve is whichever reaches higher.
+  const hintReach =
+    help && help.offsetParent !== null
+      ? help.offsetHeight + (parseFloat(getComputedStyle(help).bottom) || 0)
+      : 0;
+
+  return {
+    top: Math.min(0.3, (topBar.offsetHeight + 14) / height),
+    bottom: Math.min(0.45, (Math.max(bottomBar.offsetHeight, hintReach) + 14) / height),
+  };
 }
 
 /**
@@ -104,22 +127,28 @@ export class Stage {
     this.secretTexture = null;
   }
 
-  setSecret(word) {
-    if (this.secretWord === word) return;
+  setSecret(word, lang = 'en') {
+    if (this.secretWord === word && this.secretLang === lang) return;
     this.secretWord = word;
+    this.secretLang = lang;
     this.secretTexture?.dispose();
     if (!word) {
       this.secret.visible = false;
       return;
     }
-    this.secretTexture = makeWordTexture(word, { accent: '#0f766e', big: true, label: 'your word' });
+    this.secretTexture = makeWordTexture(word, {
+      accent: '#0f766e',
+      big: true,
+      label: true,
+      lang,
+    });
     this.secretMat.map = this.secretTexture;
     this.secretMat.needsUpdate = true;
     this.secret.visible = true;
   }
 
-  buildBoard(words) {
-    this.board.build(words);
+  buildBoard(words, lang) {
+    this.board.build(words, lang);
   }
 
   setFlipped(indices) {
@@ -188,7 +217,7 @@ export class Stage {
 
     // Fit the rack into the strip of screen the HUD does not cover, then aim
     // the camera at the middle of that strip rather than the middle of the page.
-    const reserve = hudReserve(w);
+    const reserve = hudReserve(w, h);
     const strip = Math.max(0.35, 1 - reserve.top - reserve.bottom);
     const tan = Math.tan(THREE.MathUtils.degToRad(FOV) / 2);
     const distV = this.board.height / (strip * 0.92) / 2 / tan;

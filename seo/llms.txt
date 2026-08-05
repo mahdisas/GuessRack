@@ -24,6 +24,10 @@ no payment, no ads. It runs in any modern browser on desktop, tablet or phone.
 
 ## Room rules (chosen when the room is created)
 
+- **Card language** — English or Arabic. Choosing Arabic draws the whole rack
+  from an Arabic pool of everyday nouns instead of the English one; the cards
+  render in joined Arabic script, right to left. Both players always share one
+  rack, so the choice is made once, by whoever creates the room.
 - **Opponent's progress** — off by default. When off, neither player can see how
   many cards the other has left standing; the count is not even sent to the
   other browser. When on, each player sees the other's remaining count.
@@ -42,7 +46,8 @@ appearance.
 ## Facts
 
 - Players: exactly 2
-- Cards per rack: 24, drawn from a pool of roughly 120 words
+- Languages: English or Arabic word cards
+- Cards per rack: 24, drawn from a pool of roughly 130 words
 - Typical match length: 5–10 minutes
 - Price: free
 - Account required: no

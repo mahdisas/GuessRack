@@ -1,4 +1,4 @@
-import { WORDS } from './words.js';
+import { WORD_SETS, LANGUAGES, DEFAULT_LANGUAGE } from './words.js';
 
 export const BOARD_SIZE = 24;
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no I/O/0/1
@@ -6,17 +6,24 @@ const EMPTY_ROOM_TTL = 5 * 60 * 1000; // keep a room alive this long with nobody
 
 /**
  * Room rules, chosen by whoever creates the room and fixed for its lifetime.
+ * - language: which word pool the rack is drawn from ('en' | 'ar').
  * - showOpponentProgress: reveal how many cards the opponent has left standing.
  * - suddenDeath: a wrong call loses the match outright, instead of costing the turn.
  */
-const DEFAULT_SETTINGS = { showOpponentProgress: false, suddenDeath: false };
+const DEFAULT_SETTINGS = {
+  language: DEFAULT_LANGUAGE,
+  showOpponentProgress: false,
+  suddenDeath: false,
+};
 
 function cleanSettings(raw) {
   const settings = { ...DEFAULT_SETTINGS };
   if (raw && typeof raw === 'object') {
-    for (const key of Object.keys(DEFAULT_SETTINGS)) {
-      if (typeof raw[key] === 'boolean') settings[key] = raw[key];
+    if (typeof raw.showOpponentProgress === 'boolean') {
+      settings.showOpponentProgress = raw.showOpponentProgress;
     }
+    if (typeof raw.suddenDeath === 'boolean') settings.suddenDeath = raw.suddenDeath;
+    if (LANGUAGES.includes(raw.language)) settings.language = raw.language;
   }
   return settings;
 }
@@ -52,13 +59,22 @@ function makeCode() {
   return code;
 }
 
-function drawBoard() {
-  const pool = WORDS.slice();
+function drawBoard(language) {
+  const pool = (WORD_SETS[language] ?? WORD_SETS[DEFAULT_LANGUAGE]).words.slice();
   for (let i = pool.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [pool[i], pool[j]] = [pool[j], pool[i]];
   }
   return pool.slice(0, BOARD_SIZE);
+}
+
+/**
+ * Wrap in Unicode directional isolates. These messages mix an English sentence
+ * with a player-chosen name and a board word that may be Arabic; without the
+ * isolate the quotes and full stop jump to the wrong end of the run.
+ */
+function isolate(text) {
+  return `⁨${text}⁩`;
 }
 
 function cleanName(name) {
@@ -122,7 +138,7 @@ function broadcast(room) {
 }
 
 function startMatch(room) {
-  room.board = drawBoard();
+  room.board = drawBoard(room.settings.language);
   room.round += 1;
   room.phase = 'playing';
   room.winner = null;
@@ -192,7 +208,7 @@ function cmdJoin(ws, msg) {
   if (mine !== -1) {
     room.players[mine].ws = ws;
     room.players[mine].name = cleanName(msg.name);
-    room.message = `${room.players[mine].name} reconnected.`;
+    room.message = `${isolate(room.players[mine].name)} reconnected.`;
     attach(ws, room, mine);
     broadcast(room);
     return;
@@ -246,7 +262,7 @@ function cmdGuess(room, seat, msg) {
   if (index === them.secret) {
     room.phase = 'over';
     room.winner = seat;
-    room.message = `${me.name} called "${word}" — dead on.`;
+    room.message = `${isolate(me.name)} called "${isolate(word)}" — dead on.`;
     room.players.forEach((p) => p && (p.rematch = false));
     broadcast(room);
     return;
@@ -257,7 +273,7 @@ function cmdGuess(room, seat, msg) {
   if (room.settings.suddenDeath) {
     room.phase = 'over';
     room.winner = 1 - seat;
-    room.message = `${me.name} called "${word}" — wrong.`;
+    room.message = `${isolate(me.name)} called "${isolate(word)}" — wrong.`;
     room.players.forEach((p) => p && (p.rematch = false));
     broadcast(room);
     return;
@@ -267,7 +283,7 @@ function cmdGuess(room, seat, msg) {
   // and hand the turn over so nobody can brute-force the whole rack at once.
   me.flipped.add(index);
   room.turn = 1 - seat;
-  room.message = `${me.name} called "${word}" — wrong. Turn passes.`;
+  room.message = `${isolate(me.name)} called "${isolate(word)}" — wrong. Turn passes.`;
   broadcast(room);
 }
 
@@ -321,7 +337,8 @@ export function handleClose(ws) {
   if (room.phase === 'lobby') {
     room.players[seat] = null; // nothing to preserve yet, free the seat
   } else {
-    room.message = `${player.name} dropped — the seat is held, they can rejoin with the code.`;
+    room.message =
+      `${isolate(player.name)} dropped — the seat is held, they can rejoin with the code.`;
   }
   if (!room.players[0]?.ws && !room.players[1]?.ws) room.emptySince = Date.now();
   broadcast(room);

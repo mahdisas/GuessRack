@@ -7,7 +7,7 @@
     <title>GuessRack — Free 2-Player Word Guessing Game Online</title>
     <meta
       name="description"
-      content="GuessRack is a free two-player word guessing game in 3D. You each hold a secret word from the same rack of 24 — ask yes/no questions and be the first to call it."
+      content="A free two-player word guessing game in 3D, in English or Arabic. You each hold a secret word from the same rack of 24 — ask yes/no questions and call it first."
     />
     <link rel="canonical" href="%VITE_SITE_URL%/" />
     <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
@@ -54,7 +54,7 @@
         "applicationCategory": "GameApplication",
         "operatingSystem": "Any modern web browser",
         "gamePlatform": ["Web browser", "Desktop", "Mobile"],
-        "inLanguage": "en",
+        "inLanguage": ["en", "ar"],
         "isAccessibleForFree": true,
         "offers": {
           "@type": "Offer",
@@ -128,6 +128,14 @@
           },
           {
             "@type": "Question",
+            "name": "Can I play GuessRack in Arabic?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. Whoever creates the room can set the card language to Arabic, and the whole rack is then drawn from an Arabic word pool of everyday nouns — حيوانات، طعام، أدوات، أماكن. The cards render in proper joined Arabic script, right to left. Both players get the same Arabic rack, and the questions are still asked out loud in whatever language you like."
+            }
+          },
+          {
+            "@type": "Question",
             "name": "What happens if I guess wrong?",
             "acceptedAnswer": {
               "@type": "Answer",
@@ -159,6 +167,21 @@
 
           <fieldset class="settings">
             <legend>Room rules</legend>
+
+            <div class="choice">
+              <span class="choice-label">Card language</span>
+              <div class="segmented" role="radiogroup" aria-label="Card language">
+                <label>
+                  <input type="radio" name="lang" value="en" checked />
+                  <span>English</span>
+                </label>
+                <label>
+                  <input type="radio" name="lang" value="ar" />
+                  <span lang="ar">العربية</span>
+                </label>
+              </div>
+            </div>
+
             <label class="toggle">
               <input type="checkbox" id="opt-progress" />
               <span class="switch" aria-hidden="true"></span>
@@ -225,6 +248,13 @@
           <section>
             <h2>Room rules you can change</h2>
             <dl>
+              <dt>Card language</dt>
+              <dd>
+                English or Arabic. Pick <span lang="ar">العربية</span> and the whole
+                rack is drawn from an Arabic word pool instead — everyday nouns,
+                rendered in proper joined script, right to left. Both players get the
+                same rack, so you only choose once, when you create the room.
+              </dd>
               <dt>Opponent's progress</dt>
               <dd>
                 Off by default, so you cannot see how many cards your opponent has knocked
@@ -249,6 +279,13 @@
 
             <h3>Can I play on a phone?</h3>
             <p>Yes. The rack switches to a taller layout on narrow screens.</p>
+
+            <h3>Can I play GuessRack in Arabic?</h3>
+            <p>
+              Yes — set the card language to <span lang="ar">العربية</span> when you
+              create the room and the rack is drawn from an Arabic word pool, rendered
+              in proper joined script.
+            </p>
 
             <h3>What if my connection drops?</h3>
             <p>
