@@ -1,0 +1,15 @@
+node_modules/
+dist/
+
+# Generated from seo/*.{txt,xml} by scripts/make-seo.mjs at build time.
+public/robots.txt
+public/sitemap.xml
+public/llms.txt
+
+# Local overrides. The deployed URL comes from the SITE_URL build arg in
+# fly.toml; .env itself is committed as the local default.
+.env.local
+.env.*.local
+
+.DS_Store
+Thumbs.db

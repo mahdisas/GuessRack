@@ -1,0 +1,55 @@
+# GuessRack
+
+> A free, browser-based, two-player word guessing game. Both players see the
+> same rack of 24 word cards and each is secretly assigned one word from it.
+> Players take turns asking each other yes/no questions out loud, knock down
+> the cards the answers rule out, and race to name the other player's word.
+
+GuessRack is playable at {{SITE_URL}}/ — no account, no download,
+no payment, no ads. It runs in any modern browser on desktop, tablet or phone.
+
+## How it works
+
+- One player creates a room and gets a four-character code; the other joins
+  with that code. Each player plays on their own device.
+- Both players see an identical rack of 24 word cards, rendered in 3D. Each
+  player is privately assigned one of those words as their secret.
+- Questions are asked and answered **out loud** between the players. The game
+  tracks the boards, the turn order and the final call, but never the
+  conversation, so it works across a table, on a phone call or on voice chat.
+- Clicking a card knocks it down. Knocked-down cards are private to the player
+  who knocked them down.
+- A player calls their opponent's word to try to win. The first correct call
+  wins the match.
+
+## Room rules (chosen when the room is created)
+
+- **Opponent's progress** — off by default. When off, neither player can see how
+  many cards the other has left standing; the count is not even sent to the
+  other browser. When on, each player sees the other's remaining count.
+- **Sudden death** — off by default. When off, a wrong call knocks that card
+  down on the caller's own board and passes the turn, so players may guess as
+  often as they like. When on, a single wrong call loses the match.
+
+## How it differs from Guess Who
+
+The deduction structure is the same, but the cards hold words rather than
+faces. Because a word can be an animal, an object, a place, a food or a natural
+phenomenon, the useful questions are categorical ("is it alive?", "is it
+man-made?", "would it fit in a backpack?") rather than descriptive ones about
+appearance.
+
+## Facts
+
+- Players: exactly 2
+- Cards per rack: 24, drawn from a pool of roughly 120 words
+- Typical match length: 5–10 minutes
+- Price: free
+- Account required: no
+- Platforms: any modern web browser (desktop, tablet, mobile)
+- Technology: Three.js for the 3D rack, WebSockets for real-time play
+- Reconnecting: refreshing or losing connection keeps your seat for 5 minutes
+
+## Pages
+
+- [Play GuessRack]({{SITE_URL}}/): the game, the rules, and the FAQ.

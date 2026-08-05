@@ -1,0 +1,44 @@
+# Fly.io config for GuessRack.
+#
+# IMPORTANT: run exactly ONE machine. Rooms live in memory in a single process,
+# so with two machines the two players can land on different ones and never see
+# each other. Launch with `fly launch --ha=false`, and if you ever scale, use
+# `fly scale count 1`.
+
+app = 'guessrack'
+primary_region = 'fra'
+
+[build]
+  [build.args]
+    # Stamped into the canonical link, OG tags, JSON-LD, robots.txt and sitemap.
+    # Change this to your custom domain once it resolves, then redeploy.
+    SITE_URL = 'https://guessrack.fly.dev'
+
+[env]
+  PORT = '8080'
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_start_machines = true
+  # Idle machines stop and cold-start on the next request in a second or two.
+  # WebSocket connections count as active, so a match in progress is never cut off.
+  auto_stop_machines = 'stop'
+  min_machines_running = 0
+  processes = ['app']
+
+  [http_service.concurrency]
+    type = 'connections'
+    soft_limit = 150
+    hard_limit = 200
+
+[[http_service.checks]]
+  method = 'GET'
+  path = '/health'
+  interval = '30s'
+  timeout = '5s'
+  grace_period = '10s'
+
+[[vm]]
+  size = 'shared-cpu-1x'
+  memory = '256mb'

@@ -1,0 +1,18 @@
+node_modules
+dist
+.git
+.gitignore
+.github
+.claude
+.vscode
+
+# Never ship a local .env into the image — the canonical URL must come from the
+# SITE_URL build arg, so a stray local value cannot override the deployed one.
+.env
+.env.*
+
+*.md
+LICENSE
+fly.toml
+Dockerfile
+.dockerignore

@@ -1,0 +1,33 @@
+# Render Blueprint for GuessRack.
+#
+# The free plan runs a single instance, which is exactly what this game needs:
+# rooms live in memory in one process, so there is no way for two players to be
+# routed to different servers.
+#
+# Deploy: push this repo to GitHub, then Render → New → Blueprint → pick the repo.
+
+services:
+  - type: web
+    name: guessrack
+    runtime: node
+    plan: free
+    # oregon | frankfurt | singapore | ohio | virginia — pick the one nearest
+    # your players. With a single instance this is your whole latency story.
+    region: frankfurt
+
+    # --include=dev is deliberate: vite and three are devDependencies and the
+    # client cannot be built without them, whatever NODE_ENV says.
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm run serve
+
+    healthCheckPath: /health
+    autoDeploy: true
+
+    envVars:
+      # Stamped into the canonical link, OG tags, JSON-LD, robots.txt, the
+      # sitemap and llms.txt at build time. Change this to your custom domain
+      # once it resolves, then redeploy.
+      - key: VITE_SITE_URL
+        value: https://guessrack.onrender.com
+      - key: NODE_VERSION
+        value: "24"
